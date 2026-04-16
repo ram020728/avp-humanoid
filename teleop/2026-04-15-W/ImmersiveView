@@ -1,0 +1,15 @@
+import SwiftUI
+import RealityKit
+
+struct ImmersiveView: View {
+    @State private var manager = HandTrackingManager()
+
+    var body: some View {
+        RealityView { content in
+            // 빈 씬
+        }
+        .task {
+            await manager.start()
+        }
+    }
+}

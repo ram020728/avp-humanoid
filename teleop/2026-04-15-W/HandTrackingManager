@@ -1,0 +1,65 @@
+import ARKit
+import RealityKit
+import Observation
+
+@Observable
+class HandTrackingManager {
+    var leftWristPosition: SIMD3<Float>?
+    var rightWristPosition: SIMD3<Float>?
+    var isTracking = false
+    var statusMessage = "준비 중..."
+    
+    private let session = ARKitSession()
+    private let handTracking = HandTrackingProvider()
+    
+    func start() async {
+        guard HandTrackingProvider.isSupported else {
+            statusMessage = "손 트래킹 미지원"
+            return
+        }
+        
+        let authResult = await session.requestAuthorization(for: [.handTracking])
+        guard authResult[.handTracking] == .allowed else {
+            statusMessage = "권한 거부됨"
+            return
+        }
+        
+        do {
+            try await session.run([handTracking])
+            isTracking = true
+            statusMessage = "트래킹 중"
+        } catch {
+            statusMessage = "실패: \(error)"
+            return
+        }
+        
+        for await update in handTracking.anchorUpdates {
+            let anchor = update.anchor
+            guard anchor.isTracked else { continue }
+            
+            // 월드 좌표로 변환
+            let originFromAnchor = anchor.originFromAnchorTransform
+            
+            if let wrist = anchor.handSkeleton?.joint(.wrist) {
+                let anchorFromJoint = wrist.anchorFromJointTransform
+                // 월드 좌표 = originFromAnchor * anchorFromJoint
+                let worldTransform = originFromAnchor * anchorFromJoint
+                let position = SIMD3<Float>(
+                    worldTransform.columns.3.x,
+                    worldTransform.columns.3.y,
+                    worldTransform.columns.3.z
+                )
+                
+                switch anchor.chirality {
+                case .left:
+                    leftWristPosition = position
+                case .right:
+                    rightWristPosition = position
+                }
+                
+                let side = anchor.chirality == .left ? "왼손" : "오른손"
+                print(" \(side): x=\(String(format: "%.3f", position.x)), y=\(String(format: "%.3f", position.y)), z=\(String(format: "%.3f", position.z))")
+            }
+        }
+    }
+}

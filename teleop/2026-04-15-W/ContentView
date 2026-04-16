@@ -1,0 +1,42 @@
+import SwiftUI
+
+struct ContentView: View {
+    @Environment(AppModel.self) private var appModel
+    @Environment(\.openImmersiveSpace) private var openImmersiveSpace
+    @State private var manager = HandTrackingManager()
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Text("Hand Tracker")
+                .font(.largeTitle)
+
+            Text(manager.statusMessage)
+                .font(.title3)
+
+            Button("손 트래킹 시작") {
+                Task {
+                    await openImmersiveSpace(id: appModel.immersiveSpaceID)
+                    await manager.start()
+                }
+            }
+            .font(.title2)
+            .disabled(manager.isTracking)
+
+            if let left = manager.leftWristPosition {
+                Text("왼손: \(format(left))")
+                    .font(.body)
+                    .monospaced()
+            }
+            if let right = manager.rightWristPosition {
+                Text("오른손: \(format(right))")
+                    .font(.body)
+                    .monospaced()
+            }
+        }
+        .padding(40)
+    }
+
+    func format(_ v: SIMD3<Float>) -> String {
+        String(format: "(%.3f, %.3f, %.3f)", v.x, v.y, v.z)
+    }
+}

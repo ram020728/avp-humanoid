@@ -1,0 +1,11 @@
+Research Notes
+1. Adding the permission description to Info
+I went to the Info tab from the target settings and added a new key, "Privacy - Hands Tracking Usage Description." Normally, when you add a key through the Xcode UI, it should automatically be converted into the correct key format. However, when I checked the source code of the Info file, I found that the key format was incorrect. After manually fixing the source code and running the app, the permission pop-up appeared properly.
+2. Getting hand tracking to work
+After that, since hand tracking only works when an Immersive Space is open, I modified the code so that the Immersive Space is opened from the Content View.
+3. Converting local coordinates to world coordinates
+The Immersive Space opened, but the coordinates were being logged as 0 (so I modified the HandTrackingManager file). I realized that anchorFromJointTransform returns local coordinates relative to the anchor, which is why the values could be close to 0 → so I needed to convert them to world coordinates. I replaced anchorFromJointTransform with originFromAnchorTransform. In other words, I used matrix multiplication to transform the coordinate system from local → world space.
+4. Separating the Immersive Space from the UI display
+I initially tried to display text as an overlay in the ImmersiveView, but since Immersive Space is entirely a 3D environment, a 2D overlay didn't seem to render correctly → so I separated the responsibilities: ImmersiveView's only job is to open the Immersive Space, while the UI display is handled by the Content View's window.
+I first tried opening only the Immersive Space and calling manager.start() inside ImmersiveView's .task → but because the ImmersiveView's manager and the ContentView's manager were separate instances, the data received in ImmersiveView wasn't reflected on the ContentView's screen → so I had ContentView call start() on the manager it directly owns. That way, when new data comes in, the leftWristPosition / rightWristPosition of the same instance get updated, and SwiftUI refreshes the view accordingly. The reason openImmersiveSpace is called first is because ARKit's hand tracking only actually works once the Immersive Space is open.
+Now the data shows up properly in both the Xcode logs and on the AVP display.Opus 4.6Claude
